@@ -1,4 +1,4 @@
-module github.com/hasura/go-graphql-client
+module github.com/gzltommy/go-graphql-client
 
 go 1.14
 
