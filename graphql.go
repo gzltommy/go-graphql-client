@@ -41,28 +41,35 @@ func NewClient(url string, httpClient *http.Client) *Client {
 // with a query derived from q, populating the response into it.
 // q should be a pointer to struct that corresponds to the GraphQL schema.
 func (c *Client) Query(ctx context.Context, q interface{}, variables map[string]interface{}, options ...Option) error {
-	return c.do(ctx, queryOperation, q, variables, options...)
+	return c.do(http.MethodPost, ctx, queryOperation, q, variables, options...)
+}
+
+// QueryByGet executes a single GraphQL query request,
+// with a query derived from q, populating the response into it.
+// q should be a pointer to struct that corresponds to the GraphQL schema.
+func (c *Client) QueryByGet(ctx context.Context, q interface{}, variables map[string]interface{}, options ...Option) error {
+	return c.do(http.MethodGet, ctx, queryOperation, q, variables, options...)
 }
 
 // NamedQuery executes a single GraphQL query request, with operation name
 //
 // Deprecated: this is the shortcut of Query method, with NewOperationName option
 func (c *Client) NamedQuery(ctx context.Context, name string, q interface{}, variables map[string]interface{}, options ...Option) error {
-	return c.do(ctx, queryOperation, q, variables, append(options, OperationName(name))...)
+	return c.do(http.MethodPost, ctx, queryOperation, q, variables, append(options, OperationName(name))...)
 }
 
 // Mutate executes a single GraphQL mutation request,
 // with a mutation derived from m, populating the response into it.
 // m should be a pointer to struct that corresponds to the GraphQL schema.
 func (c *Client) Mutate(ctx context.Context, m interface{}, variables map[string]interface{}, options ...Option) error {
-	return c.do(ctx, mutationOperation, m, variables, options...)
+	return c.do(http.MethodPost, ctx, mutationOperation, m, variables, options...)
 }
 
 // NamedMutate executes a single GraphQL mutation request, with operation name
 //
 // Deprecated: this is the shortcut of Mutate method, with NewOperationName option
 func (c *Client) NamedMutate(ctx context.Context, name string, m interface{}, variables map[string]interface{}, options ...Option) error {
-	return c.do(ctx, mutationOperation, m, variables, append(options, OperationName(name))...)
+	return c.do(http.MethodPost, ctx, mutationOperation, m, variables, append(options, OperationName(name))...)
 }
 
 // Query executes a single GraphQL query request,
@@ -159,7 +166,7 @@ func (c *Client) doRaw(ctx context.Context, op operationType, v interface{}, var
 }
 
 // do executes a single GraphQL operation and unmarshal json.
-func (c *Client) do(ctx context.Context, op operationType, v interface{}, variables map[string]interface{}, options ...Option) error {
+func (c *Client) do(method string, ctx context.Context, op operationType, v interface{}, variables map[string]interface{}, options ...Option) error {
 	var query string
 	var err error
 	switch op {
@@ -186,7 +193,7 @@ func (c *Client) do(ctx context.Context, op operationType, v interface{}, variab
 		return err
 	}
 
-	request, err := http.NewRequestWithContext(ctx, http.MethodPost, c.url, &buf)
+	request, err := http.NewRequestWithContext(ctx, method, c.url, &buf)
 	if err != nil {
 		return fmt.Errorf("problem constructing request: %w", err)
 	}
