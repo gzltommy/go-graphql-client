@@ -77,13 +77,21 @@ func (c *Client) NamedMutate(ctx context.Context, name string, m interface{}, va
 // q should be a pointer to struct that corresponds to the GraphQL schema.
 // return raw bytes message.
 func (c *Client) QueryRaw(ctx context.Context, q interface{}, variables map[string]interface{}, options ...Option) (*json.RawMessage, error) {
-	return c.doRaw(ctx, queryOperation, q, variables, options...)
+	return c.doRaw(http.MethodPost, ctx, queryOperation, q, variables, options...)
+}
+
+// Query executes a single GraphQL query request,
+// with a query derived from q, populating the response into it.
+// q should be a pointer to struct that corresponds to the GraphQL schema.
+// return raw bytes message.
+func (c *Client) QueryRawByGet(ctx context.Context, q interface{}, variables map[string]interface{}, options ...Option) (*json.RawMessage, error) {
+	return c.doRaw(http.MethodGet, ctx, queryOperation, q, variables, options...)
 }
 
 // NamedQueryRaw executes a single GraphQL query request, with operation name
 // return raw bytes message.
 func (c *Client) NamedQueryRaw(ctx context.Context, name string, q interface{}, variables map[string]interface{}, options ...Option) (*json.RawMessage, error) {
-	return c.doRaw(ctx, queryOperation, q, variables, append(options, OperationName(name))...)
+	return c.doRaw(http.MethodPost, ctx, queryOperation, q, variables, append(options, OperationName(name))...)
 }
 
 // MutateRaw executes a single GraphQL mutation request,
@@ -91,18 +99,18 @@ func (c *Client) NamedQueryRaw(ctx context.Context, name string, q interface{}, 
 // m should be a pointer to struct that corresponds to the GraphQL schema.
 // return raw bytes message.
 func (c *Client) MutateRaw(ctx context.Context, m interface{}, variables map[string]interface{}, options ...Option) (*json.RawMessage, error) {
-	return c.doRaw(ctx, mutationOperation, m, variables, options...)
+	return c.doRaw(http.MethodPost, ctx, mutationOperation, m, variables, options...)
 }
 
 // NamedMutateRaw executes a single GraphQL mutation request, with operation name
 // return raw bytes message.
 func (c *Client) NamedMutateRaw(ctx context.Context, name string, m interface{}, variables map[string]interface{}, options ...Option) (*json.RawMessage, error) {
-	return c.doRaw(ctx, mutationOperation, m, variables, append(options, OperationName(name))...)
+	return c.doRaw(http.MethodPost, ctx, mutationOperation, m, variables, append(options, OperationName(name))...)
 }
 
 // do executes a single GraphQL operation.
 // return raw message and error
-func (c *Client) doRaw(ctx context.Context, op operationType, v interface{}, variables map[string]interface{}, options ...Option) (*json.RawMessage, error) {
+func (c *Client) doRaw(method string, ctx context.Context, op operationType, v interface{}, variables map[string]interface{}, options ...Option) (*json.RawMessage, error) {
 	var query string
 	var err error
 	switch op {
@@ -129,7 +137,7 @@ func (c *Client) doRaw(ctx context.Context, op operationType, v interface{}, var
 		return nil, err
 	}
 
-	request, err := http.NewRequestWithContext(ctx, http.MethodPost, c.url, &buf)
+	request, err := http.NewRequestWithContext(ctx, method, c.url, &buf)
 	if err != nil {
 		return nil, fmt.Errorf("problem constructing request: %w", err)
 	}
