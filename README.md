@@ -7,7 +7,29 @@ go get -u github.com/gzltommy/go-graphql-client
 ```
 
 ## Usage
+postman 请求
+```
+query {
+  addressInfo(address: "0xb262844a841c5a3fde9a962bd8996c3814896a65") {
+    nfts(option: {
+      campaignID: "GComvUjWMG"
+      nftCoreAddress: "0xADc466855ebe8d1402C5F7e6706Fccc3AEdB44a0"
+      orderBy: ID
+      order: ASC
+    }) {
+      totalCount
+      list {
+        id
+        nftCore {
+          contractAddress
+        }
+      }
+    }
+  }
+}
+```
 
+go 代码请求
 ```go
 package main
 
