@@ -8,7 +8,7 @@ go get -u github.com/gzltommy/go-graphql-client
 
 ## Usage
 
-```
+```go
 package main
 
 import (
