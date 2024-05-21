@@ -6,8 +6,10 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"io"
 	"io/ioutil"
 	"net/http"
+	"net/http/httputil"
 	"strings"
 
 	"github.com/gzltommy/go-graphql-client/internal/jsonutil"
@@ -22,6 +24,7 @@ type Client struct {
 	url             string // GraphQL server URL.
 	httpClient      *http.Client
 	requestModifier RequestModifier
+	debug           bool
 }
 
 // NewClient creates a GraphQL client targeting the specified GraphQL server URL.
@@ -34,7 +37,13 @@ func NewClient(url string, httpClient *http.Client) *Client {
 		url:             url,
 		httpClient:      httpClient,
 		requestModifier: nil,
+		debug:           false,
 	}
+}
+
+// Debug 开启调试模式
+func (c *Client) Debug() {
+	c.debug = true
 }
 
 // Query executes a single GraphQL query request,
@@ -211,6 +220,11 @@ func (c *Client) do(method string, ctx context.Context, op operationType, v inte
 		c.requestModifier(request)
 	}
 
+	if c.debug {
+		reqDump, _ := httputil.DumpRequest(request, true)
+		fmt.Printf("\n\n%s\n\n", string(reqDump))
+	}
+
 	resp, err := c.httpClient.Do(request)
 	if err != nil {
 		return err
@@ -227,8 +241,8 @@ func (c *Client) do(method string, ctx context.Context, op operationType, v inte
 	}
 
 	if resp.StatusCode != http.StatusOK {
-		body, _ := ioutil.ReadAll(r)
-		return fmt.Errorf("non-200 OK status code: %v body: %q", resp.Status, body)
+		body, _ := io.ReadAll(r)
+		return fmt.Errorf("non-200 OK status code: %v body: %q", resp.StatusCode, body)
 	}
 	var out struct {
 		Data   *json.RawMessage
@@ -237,14 +251,14 @@ func (c *Client) do(method string, ctx context.Context, op operationType, v inte
 
 	err = json.NewDecoder(r).Decode(&out)
 	if err != nil {
-		// TODO: Consider including response body in returned error, if deemed helpful.
-		return err
+		body, _ := io.ReadAll(r)
+		return fmt.Errorf("err:%w,body:%q", err, body)
 	}
 	if out.Data != nil {
 		err := jsonutil.UnmarshalGraphQL(*out.Data, v)
 		if err != nil {
-			// TODO: Consider including response body in returned error, if deemed helpful.
-			return err
+			body, _ := io.ReadAll(r)
+			return fmt.Errorf("err:%w,body:%q", err, body)
 		}
 	}
 	if len(out.Errors) > 0 {
